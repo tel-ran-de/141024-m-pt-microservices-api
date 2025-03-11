@@ -28,7 +28,7 @@ class LostItem(LostItemBase):
 
 # FoundtItems
 class FoundItemBase(BaseModel):
-
+    category_id: int
     name: str
     description: str = None
     found_date: datetime = None
