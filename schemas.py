@@ -4,6 +4,7 @@ from datetime import datetime
 
 # LostItems
 class LostItemBase(BaseModel):
+    category_id: int
     name: str
     description: str = None
     lost_date: datetime = None
@@ -47,3 +48,22 @@ class FoundItemUpdate(BaseModel):
 
 class FoundItem(FoundItemBase):
     id: int
+
+
+class CategoryCreate(BaseModel):
+    name: str
+    description: str = ""
+
+
+class CategoryUpdate(BaseModel):
+    name: str = None
+    description: str = None
+
+
+class CategoryRead(BaseModel):
+    id: int
+    name: str
+    description: str
+
+    class Config:
+        from_attributes = True

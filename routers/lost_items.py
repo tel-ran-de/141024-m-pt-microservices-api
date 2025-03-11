@@ -11,6 +11,11 @@ router = APIRouter()
 
 @router.post("/", response_model=schemas.LostItem)
 async def create_lost_item(item: schemas.LostItemCreate, db: AsyncSession = Depends(get_db)):
+    # Проверка существования категории
+    category = await db.execute(select(models.Category).where(models.Category.id == item.category_id))
+    category = category.scalar_one_or_none()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
     db_item = models.LostItem(**item.model_dump())
     db.add(db_item)
     await db.commit()
