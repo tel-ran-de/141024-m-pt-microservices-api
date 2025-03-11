@@ -11,6 +11,7 @@ class Category(Base):
     name: Mapped[str] = mapped_column(String, unique=True, index=True)
     description: Mapped[str] = mapped_column(Text, default='')
     lost_items: Mapped[list["LostItem"]] = relationship(back_populates="category")
+    found_items: Mapped[list["FoundItem"]] = relationship(back_populates='category')
 
 
 class LostItem(Base):
@@ -33,3 +34,5 @@ class FoundItem(Base):
     description: Mapped[str] = mapped_column(Text, default='')
     found_date: Mapped[DateTime] = mapped_column(DateTime, default=func.now())
     location: Mapped[str] = mapped_column(String)
+    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
+    category: Mapped["Category"] = relationship(back_populates='found_items')
