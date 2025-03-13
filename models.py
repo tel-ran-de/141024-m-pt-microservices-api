@@ -1,8 +1,30 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, func
+from sqlalchemy import Column, Integer, String, DateTime, Text, Table, ForeignKey, func
 from sqlalchemy.orm import declarative_base, Mapped, mapped_column, relationship
 
 Base = declarative_base()
 
+
+# Ассоциативная таблица для LostItem <-> Tag
+lostitem_tag = Table(
+    "lostitem_tag",            # название ассоциативной таблицы
+    Base.metadata,
+    Column("lost_item_id", ForeignKey("lost_items.id"), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True),
+)
+
+
+class Tag(Base):
+    __tablename__ = "tags"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String, unique=True, index=True)
+
+    # Связь только с LostItem (в будущем можно добавить и found_items)
+    lost_items: Mapped[list["LostItem"]] = relationship(
+        "LostItem",
+        secondary=lostitem_tag,          # указываем таблицу связи
+        back_populates="tags"            # ссылаемся на поле "tags" в LostItem
+    )
 
 class Category(Base):
     __tablename__ = "categories"
@@ -24,6 +46,11 @@ class LostItem(Base):
     location: Mapped[str] = mapped_column(String)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
     category: Mapped["Category"] = relationship(back_populates="lost_items")
+    # Добавляем связь "tags":
+    tags: Mapped[list["Tag"]] = relationship(
+        secondary=lostitem_tag,   # та же таблица lostitem_tag
+        back_populates="lost_items"
+    )
 
 
 class FoundItem(Base):
