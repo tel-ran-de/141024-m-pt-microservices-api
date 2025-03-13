@@ -4,6 +4,7 @@ import models
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload  # <-- добавили
 from typing import Optional
 
 from database import get_db
@@ -46,7 +47,11 @@ async def read_lost_items(
     - Сортировки (order_by, sort_desc)
     """
 
-    query = select(models.LostItem)
+    # Главная разница: добавляем options(selectinload)
+    query = (
+        select(models.LostItem)
+        .options(selectinload(models.LostItem.tags))
+    )
 
     # Фильтрация по category_id
     if category_id is not None:

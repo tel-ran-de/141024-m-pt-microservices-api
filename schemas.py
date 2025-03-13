@@ -2,6 +2,40 @@ from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 
+class TagBase(BaseModel):
+    """
+    Базовая модель для тега.
+    Здесь может быть только имя, если мы не планируем других полей.
+    """
+    name: str
+
+
+class TagCreate(TagBase):
+    """
+    Для создания/обновления тега. Пока ничего не добавляем, но
+    если захотим запретить пустые строки, можно прописать валидаторы.
+    """
+    pass
+
+
+class TagUpdate(BaseModel):
+    """
+    Если нужно частичное обновление (patch), можно добавить поля:
+    name: Optional[str] = None
+    """
+    name: str | None = None
+
+class TagRead(TagBase):
+    """
+    Возвращаемый при GET.
+    Содержит id и name.
+    """
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
 # LostItems
 class LostItemBase(BaseModel):
     category_id: int
@@ -24,6 +58,11 @@ class LostItemUpdate(BaseModel):
 
 class LostItem(LostItemBase):
     id: int
+    # Возвращаем список тегов (при GET)
+    tags: list[TagRead] = []
+
+    class Config:
+        from_attributes = True
 
 
 # FoundtItems
