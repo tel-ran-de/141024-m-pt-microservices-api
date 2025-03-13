@@ -13,6 +13,15 @@ lostitem_tag = Table(
 )
 
 
+# Ассоциативная таблица для FoundItem <-> Tag
+founditem_tag = Table(
+    "founditem_tag",
+    Base.metadata,
+    Column("found_item_id", ForeignKey("found_items.id"), primary_key=True),
+    Column("tag_id", ForeignKey("tags.id"), primary_key=True),
+)
+
+
 class Tag(Base):
     __tablename__ = "tags"
 
@@ -24,6 +33,12 @@ class Tag(Base):
         "LostItem",
         secondary=lostitem_tag,          # указываем таблицу связи
         back_populates="tags"            # ссылаемся на поле "tags" в LostItem
+    )
+
+    found_items: Mapped[list["LostItem"]] = relationship(
+        "FoundItem",
+        secondary=founditem_tag,
+        back_populates="tags"
     )
 
 class Category(Base):
@@ -63,3 +78,8 @@ class FoundItem(Base):
     location: Mapped[str] = mapped_column(String)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
     category: Mapped["Category"] = relationship(back_populates='found_items')
+    # Добавляем связь "tags":
+    tags: Mapped[list["Tag"]] = relationship(
+        secondary=founditem_tag,   # та же таблица founditem_tag
+        back_populates="found_items"
+    )

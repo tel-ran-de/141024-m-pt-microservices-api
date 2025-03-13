@@ -404,3 +404,17 @@ GET /lost_items/?skip=5&limit=5&category_id=2&location=москва&order_by=los
 - Если в будущем понадобится аналогичная логика для FoundItem, следует применять тот же подход.  
 
 **commit: `Урок 13: привязка/отвязка тегов (selectinload) для LostItem`**
+
+**Зачем нужны эти изменения:**
+- Готовим Many-to-Many связь FoundItem <-> Tag.
+- Позволяет хранить, какие теги привязаны к найденным предметам.
+
+**Доп. информация:**
+- Это аналогично lostitem_tag, но теперь для FoundItem.
+
+- создание файла миграции:
+`alembic revision --autogenerate -m "add Tag table and founditem_tag association"`
+- применение миграции:
+`alembic upgrade head`
+
+**commit: `Урок 13 (РЕШЕНИЕ): добавление тегов для найденных предметов`**
