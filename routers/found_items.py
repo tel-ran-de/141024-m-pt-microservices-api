@@ -48,8 +48,11 @@ async def read_found_items(
     - Сортировки (order_by, sort_desc)
     """
 
-    # Начальный запрос ко всей таблице FoundItem
-    query = select(models.FoundItem)
+    # Главная разница: добавляем options(selectinload)
+    query = (
+        select(models.FoundItem)
+        .options(selectinload(models.FoundItem.tags))
+    )
 
     # Фильтрация по category_id, если указано
     if category_id is not None:

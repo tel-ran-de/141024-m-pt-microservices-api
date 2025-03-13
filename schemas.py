@@ -87,6 +87,11 @@ class FoundItemUpdate(BaseModel):
 
 class FoundItem(FoundItemBase):
     id: int
+    # Возвращаем список тегов (при GET)
+    tags: list[TagRead] = []
+
+    class Config:
+        from_attributes = True
 
 
 class CategoryCreate(BaseModel):
