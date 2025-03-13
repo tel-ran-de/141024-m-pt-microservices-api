@@ -79,6 +79,81 @@ async def read_lost_items(
     return items
 
 
+# -----------------------------------------------------------------------------
+# Метод "привязать тег" (POST /lost_items/{lost_item_id}/tags?tag_id=...)
+# -----------------------------------------------------------------------------
+@router.post("/{lost_item_id}/tags", response_model=schemas.LostItem)
+async def attach_tag_to_lost_item(
+    lost_item_id: int,
+    tag_id: int = Query(...),
+    db: AsyncSession = Depends(get_db),
+):
+
+    # Вместо db.get(...):
+    # 1) Выполним явный SELECT с .options(selectinload(...))
+    lost_item_query = (
+        select(models.LostItem)
+        .where(models.LostItem.id == lost_item_id)
+        .options(selectinload(models.LostItem.tags))  # <- тут принудительная загрузка
+    )
+    lost_item_result = await db.execute(lost_item_query)
+    lost_item = lost_item_result.scalar_one_or_none()
+    if not lost_item:
+        raise HTTPException(status_code=404, detail="LostItem not found")
+
+    # Получаем тег
+    tag = await db.get(models.Tag, tag_id)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+
+    # Теперь lost_item.tags уже загружено в этом же контексте,
+    # и при обращении к lost_item.tags не будет ленивой (lazy) загрузки.
+    if tag not in lost_item.tags:
+        lost_item.tags.append(tag)
+        await db.commit()
+        await db.refresh(lost_item)
+
+    return lost_item
+
+
+@router.delete("/{lost_item_id}/tags/{tag_id}")
+async def detach_tag_from_lost_item(
+    lost_item_id: int,
+    tag_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Удаляет связь между LostItem и Tag.
+    Если связь не существует, ничего не меняется.
+    Возвращаем простое подтверждение,
+    либо можно вернуть полный объект LostItem.
+    """
+
+    # Вместо db.get(...):
+    # Делаем явный SELECT + selectinload(LostItem.tags)
+    lost_item_query = (
+        select(models.LostItem)
+        .where(models.LostItem.id == lost_item_id)
+        .options(selectinload(models.LostItem.tags))  # важный момент!
+    )
+    lost_item_result = await db.execute(lost_item_query)
+    lost_item = lost_item_result.scalar_one_or_none()
+    if not lost_item:
+        raise HTTPException(status_code=404, detail="LostItem not found")
+
+    # Тут можно db.get(...) для тега, это ОК, т. к. тег не требует eager loading
+    tag = await db.get(models.Tag, tag_id)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+
+    # Теперь lost_item.tags уже загружено
+    if tag in lost_item.tags:
+        lost_item.tags.remove(tag)
+        await db.commit()
+
+    return {"detail": "Tag detached from LostItem"}
+
+
 @router.get("/{item_id}", response_model=schemas.LostItem)
 async def read_lost_item(item_id: int, db: AsyncSession = Depends(get_db)):
     item = await db.get(models.LostItem, item_id)
