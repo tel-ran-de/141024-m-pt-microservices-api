@@ -80,6 +80,81 @@ async def read_found_items(
     return items
 
 
+# -----------------------------------------------------------------------------
+# Метод "привязать тег" (POST /found_items/{found_item_id}/tags?tag_id=...)
+# -----------------------------------------------------------------------------
+@router.post("/{found_item_id}/tags", response_model=schemas.FoundItem)
+async def attach_tag_to_found_item(
+    found_item_id: int,
+    tag_id: int = Query(...),
+    db: AsyncSession = Depends(get_db),
+):
+
+    # Вместо db.get(...):
+    # 1) Выполним явный SELECT с .options(selectinload(...))
+    found_item_query = (
+        select(models.FoundItem)
+        .where(models.FoundItem.id == found_item_id)
+        .options(selectinload(models.FoundItem.tags))  # <- тут принудительная загрузка
+    )
+    found_item_result = await db.execute(found_item_query)
+    found_item = found_item_result.scalar_one_or_none()
+    if not found_item:
+        raise HTTPException(status_code=404, detail="FoundItem not found")
+
+    # Получаем тег
+    tag = await db.get(models.Tag, tag_id)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+
+    # Теперь found_item.tags уже загружено в этом же контексте,
+    # и при обращении к found_item.tags не будет ленивой (lazy) загрузки.
+    if tag not in found_item.tags:
+        found_item.tags.append(tag)
+        await db.commit()
+        await db.refresh(found_item)
+
+    return found_item
+
+
+@router.delete("/{found_item_id}/tags/{tag_id}")
+async def detach_tag_from_found_item(
+    found_item_id: int,
+    tag_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Удаляет связь между FoundItem и Tag.
+    Если связь не существует, ничего не меняется.
+    Возвращаем простое подтверждение,
+    либо можно вернуть полный объект FoundItem.
+    """
+
+    # Вместо db.get(...):
+    # Делаем явный SELECT + selectinload(FoundItem.tags)
+    found_item_query = (
+        select(models.FoundItem)
+        .where(models.FoundItem.id == found_item_id)
+        .options(selectinload(models.FoundItem.tags))  # важный момент!
+    )
+    found_item_result = await db.execute(found_item_query)
+    found_item = found_item_result.scalar_one_or_none()
+    if not found_item:
+        raise HTTPException(status_code=404, detail="FoundItem not found")
+
+    # Тут можно db.get(...) для тега, это ОК, т. к. тег не требует eager loading
+    tag = await db.get(models.Tag, tag_id)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+
+    # Теперь found_item.tags уже загружено
+    if tag in found_item.tags:
+        found_item.tags.remove(tag)
+        await db.commit()
+
+    return {"detail": "Tag detached from FoundItem"}
+
+
 @router.get("/{item_id}", response_model=schemas.FoundItem)
 async def read_found_item(
         item_id: int,
