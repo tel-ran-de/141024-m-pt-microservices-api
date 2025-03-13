@@ -10,7 +10,7 @@ import schemas
 router = APIRouter()
 
 
-@router.post("categories/", response_model=schemas.CategoryRead)
+@router.post("/", response_model=schemas.CategoryRead)
 async def create_category(category: schemas.CategoryCreate, db: AsyncSession = Depends(get_db)):
     db_category = models.Category(**category.model_dump())
     db.add(db_category)
@@ -19,7 +19,7 @@ async def create_category(category: schemas.CategoryCreate, db: AsyncSession = D
     return db_category
 
 
-@router.get("categories/{category_id}", response_model=schemas.CategoryRead)
+@router.get("/{category_id}", response_model=schemas.CategoryRead)
 async def read_category(category_id: int, db: AsyncSession = Depends(get_db)):
     category = await db.execute(select(models.Category).where(models.Category.id == category_id))
     category = category.scalar_one_or_none()
@@ -28,7 +28,7 @@ async def read_category(category_id: int, db: AsyncSession = Depends(get_db)):
     return category
 
 
-@router.put("categories/{category_id}", response_model=schemas.CategoryRead)
+@router.put("/{category_id}", response_model=schemas.CategoryRead)
 async def update_category(category_id: int, category_update: schemas.CategoryUpdate,
                           db: AsyncSession = Depends(get_db)):
     category = await db.execute(select(models.Category).where(models.Category.id == category_id))
@@ -44,7 +44,7 @@ async def update_category(category_id: int, category_update: schemas.CategoryUpd
     return category
 
 
-@router.delete("categories/{category_id}", response_model=dict)
+@router.delete("/{category_id}", response_model=dict)
 async def delete_category(category_id: int, db: AsyncSession = Depends(get_db)):
     category = await db.execute(select(models.Category).where(models.Category.id == category_id))
     category = category.scalar_one_or_none()
