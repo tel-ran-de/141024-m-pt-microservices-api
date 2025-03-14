@@ -4,6 +4,7 @@ from routers.found_items import router as found_items_router
 from routers.categories import router as categories_router
 from routers.tags import router as tags_router
 from routers.users import router as users_router
+from routers.auth import router as auth_router
 
 
 app = FastAPI()
@@ -12,6 +13,7 @@ app.include_router(found_items_router, prefix="/found_items", tags=["foundItems"
 app.include_router(categories_router, prefix="/categories", tags=["categories"])
 app.include_router(tags_router, prefix="/tags", tags=["tags"])
 app.include_router(users_router, prefix="/users", tags=["users"])
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
 
 @app.get("/")
