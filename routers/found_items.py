@@ -3,8 +3,12 @@ import models
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload  # <-- добавили
 from typing import Optional
 from database import get_db
+from utils.security import get_db, get_current_user, oauth2_scheme
+from schemas import UserRead
+from models import User  # не забудьте модель пользователя!
 
 
 router = APIRouter()
@@ -34,6 +38,8 @@ async def create_found_item(
 @router.get("/", response_model=list[schemas.FoundItem])
 async def read_found_items(
     db: AsyncSession = Depends(get_db),
+    token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+    user: models.User = Depends(get_current_user),  # 👈 защита через JWT
     skip: int = Query(0, ge=0, description="Сколько записей пропустить"),
     limit: int = Query(10, gt=0, description="Сколько записей вернуть"),
     category_id: Optional[int] = Query(None, description="Фильтрация по категории"),
@@ -46,6 +52,8 @@ async def read_found_items(
     - Пагинации (skip, limit)
     - Фильтрации (category_id, location)
     - Сортировки (order_by, sort_desc)
+
+    🔐 Только для авторизованных пользователей.
     """
 
     # Главная разница: добавляем options(selectinload)
@@ -67,10 +75,7 @@ async def read_found_items(
         # Проверяем, есть ли такое поле у FoundItem
         column_attr = getattr(models.FoundItem, order_by, None)
         if column_attr is not None:
-            if sort_desc:
-                query = query.order_by(column_attr.desc())
-            else:
-                query = query.order_by(column_attr.asc())
+            query = query.order_by(column_attr.desc() if sort_desc else column_attr.asc())
 
     # Пагинация
     query = query.offset(skip).limit(limit)
