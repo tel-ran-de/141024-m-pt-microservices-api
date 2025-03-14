@@ -576,3 +576,28 @@ GET /lost_items/?skip=5&limit=5&category_id=2&location=москва&order_by=los
 - Упрощение логики сортировки делает код более читаемым и поддерживаемым.
 
 **commit: `Урок 14: добавление защиты маршрутов с помощью JWT`**
+
+**Описание изменений:**
+
+1. **Изменения в routers/categories.py:**
+   - Добавлены зависимости `token` и `user` в маршруты `create_category`, `update_category`, и `delete_category` для обеспечения защиты через JWT.
+   - Теперь маршруты доступны только авторизованным пользователям.
+
+2. **Изменения в routers/found_items.py:**
+   - Добавлены зависимости `token` и `user` в маршруты `create_found_item`, `attach_tag_to_found_item`, `detach_tag_from_found_item`, `read_found_item`, `update_found_item`, и `delete_found_item` для обеспечения защиты через JWT.
+   - Добавлено явное загрузка связанных данных (`tags`) через `selectinload` для маршрутов `create_found_item`, `read_found_item`, и `update_found_item`.
+
+3. **Изменения в routers/lost_items.py:**
+   - Добавлены зависимости `token` и `user` в маршруты `create_lost_item`, `attach_tag_to_lost_item`, `detach_tag_from_lost_item`, `read_lost_item`, `update_lost_item`, и `delete_lost_item` для обеспечения защиты через JWT.
+   - Добавлено явное загрузка связанных данных (`tags`) через `selectinload` для маршрутов `create_lost_item`, `read_lost_item`, и `update_lost_item`.
+
+4. **Изменения в routers/tags.py:**
+   - Добавлены зависимости `token` и `user` в маршруты `create_tag`, `read_tag_by_id`, `update_tag`, и `delete_tag` для обеспечения защиты через JWT.
+
+**Зачем нужны эти изменения:**
+
+- Введение защиты маршрутов с помощью JWT обеспечивает безопасность API, позволяя только авторизованным пользователям получать доступ к определенным ресурсам.
+- Использование `selectinload` для загрузки связанных данных улучшает производительность при чтении данных, уменьшая количество запросов к базе данных.
+- Обновление маршрутов для работы с категориями, найденными предметами, потерянными предметами и тегами обеспечивает согласованность и безопасность данных на уровне API.
+
+**commit: `Урок 14 (РЕШЕНИЕ): добавление защиты маршрутов с помощью JWT`**

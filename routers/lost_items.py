@@ -1,20 +1,27 @@
 import schemas
 import models
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload  # <-- добавили
 from typing import Optional
-
 from database import get_db
+from utils.security import get_db, get_current_user, oauth2_scheme
+from schemas import UserRead
+from models import User  # не забудьте модель пользователя!
+
 
 
 router = APIRouter()
 
 
 @router.post("/", response_model=schemas.LostItem)
-async def create_lost_item(item: schemas.LostItemCreate, db: AsyncSession = Depends(get_db)):
+async def create_lost_item(
+        item: schemas.LostItemCreate,
+        db: AsyncSession = Depends(get_db),
+        token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+        user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+):
     # Проверка существования категории
     category = await db.execute(
         select(models.Category).where(models.Category.id == item.category_id)
@@ -27,6 +34,14 @@ async def create_lost_item(item: schemas.LostItemCreate, db: AsyncSession = Depe
     db.add(db_item)
     await db.commit()
     await db.refresh(db_item)
+
+    # Явно загружаем связь tags через selectinload
+    result = await db.execute(
+        select(models.LostItem)
+        .options(selectinload(models.LostItem.tags))
+        .where(models.LostItem.id == db_item.id)
+    )
+    db_item = result.scalar_one_or_none()
     return db_item
 
 
@@ -87,6 +102,8 @@ async def attach_tag_to_lost_item(
     lost_item_id: int,
     tag_id: int = Query(...),
     db: AsyncSession = Depends(get_db),
+    token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+    user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
 
     # Вместо db.get(...):
@@ -121,6 +138,8 @@ async def detach_tag_from_lost_item(
     lost_item_id: int,
     tag_id: int,
     db: AsyncSession = Depends(get_db),
+    token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+    user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
     """
     Удаляет связь между LostItem и Tag.
@@ -156,14 +175,25 @@ async def detach_tag_from_lost_item(
 
 @router.get("/{item_id}", response_model=schemas.LostItem)
 async def read_lost_item(item_id: int, db: AsyncSession = Depends(get_db)):
-    item = await db.get(models.LostItem, item_id)
+    result = await db.execute(
+        select(models.LostItem)
+        .options(selectinload(models.LostItem.tags))
+        .where(models.LostItem.id == item_id)
+    )
+    item = result.scalar_one_or_none()
     if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
     return item
 
 
 @router.put("/{item_id}", response_model=schemas.LostItem)
-async def update_lost_item(item_id: int, item: schemas.LostItemUpdate, db: AsyncSession = Depends(get_db)):
+async def update_lost_item(
+        item_id: int,
+        item: schemas.LostItemUpdate,
+        db: AsyncSession = Depends(get_db),
+        token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+        user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+):
     db_item = await db.get(models.LostItem, item_id)
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -173,11 +203,24 @@ async def update_lost_item(item_id: int, item: schemas.LostItemUpdate, db: Async
 
     await db.commit()
     await db.refresh(db_item)
+
+    # Выполняем повторный запрос с eager loading для поля tags
+    result = await db.execute(
+        select(models.FoundItem)
+        .options(selectinload(models.FoundItem.tags))
+        .where(models.FoundItem.id == item_id)
+    )
+    db_item = result.scalar_one_or_none()
     return db_item
 
 
 @router.delete("/{item_id}")
-async def delete_lost_item(item_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_lost_item(
+        item_id: int,
+        db: AsyncSession = Depends(get_db),
+        token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+        user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+):
     db_item = await db.get(models.LostItem, item_id)
     if db_item is None:
         raise HTTPException(status_code=404, detail="Item not found")

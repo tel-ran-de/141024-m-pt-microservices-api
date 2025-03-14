@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from database import get_db
+from utils.security import get_db, get_current_user, oauth2_scheme
 import models
 import schemas
 
@@ -11,7 +12,12 @@ router = APIRouter()
 
 
 @router.post("/", response_model=schemas.CategoryRead)
-async def create_category(category: schemas.CategoryCreate, db: AsyncSession = Depends(get_db)):
+async def create_category(
+        category: schemas.CategoryCreate,
+        db: AsyncSession = Depends(get_db),
+        token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+        user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+):
     db_category = models.Category(**category.model_dump())
     db.add(db_category)
     await db.commit()
@@ -29,8 +35,13 @@ async def read_category(category_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.put("/{category_id}", response_model=schemas.CategoryRead)
-async def update_category(category_id: int, category_update: schemas.CategoryUpdate,
-                          db: AsyncSession = Depends(get_db)):
+async def update_category(
+        category_id: int,
+        category_update: schemas.CategoryUpdate,
+        db: AsyncSession = Depends(get_db),
+        token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+        user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+):
     category = await db.execute(select(models.Category).where(models.Category.id == category_id))
     category = category.scalar_one_or_none()
     if not category:
@@ -45,7 +56,12 @@ async def update_category(category_id: int, category_update: schemas.CategoryUpd
 
 
 @router.delete("/{category_id}", response_model=dict)
-async def delete_category(category_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_category(
+        category_id: int,
+        db: AsyncSession = Depends(get_db),
+        token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+        user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+):
     category = await db.execute(select(models.Category).where(models.Category.id == category_id))
     category = category.scalar_one_or_none()
     if not category:

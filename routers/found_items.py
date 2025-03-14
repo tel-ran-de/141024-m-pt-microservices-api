@@ -17,7 +17,9 @@ router = APIRouter()
 @router.post("/", response_model=schemas.FoundItem)
 async def create_found_item(
     item: schemas.FoundItemCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+    user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
     # Проверяем, существует ли категория
     category = await db.execute(
@@ -32,14 +34,20 @@ async def create_found_item(
     db.add(db_item)
     await db.commit()
     await db.refresh(db_item)
+
+    # Явно загружаем связь tags через selectinload
+    result = await db.execute(
+        select(models.FoundItem)
+        .options(selectinload(models.FoundItem.tags))
+        .where(models.FoundItem.id == db_item.id)
+    )
+    db_item = result.scalar_one_or_none()
     return db_item
 
 
 @router.get("/", response_model=list[schemas.FoundItem])
 async def read_found_items(
     db: AsyncSession = Depends(get_db),
-    token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-    user: models.User = Depends(get_current_user),  # 👈 защита через JWT
     skip: int = Query(0, ge=0, description="Сколько записей пропустить"),
     limit: int = Query(10, gt=0, description="Сколько записей вернуть"),
     category_id: Optional[int] = Query(None, description="Фильтрация по категории"),
@@ -93,6 +101,8 @@ async def attach_tag_to_found_item(
     found_item_id: int,
     tag_id: int = Query(...),
     db: AsyncSession = Depends(get_db),
+    token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+    user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
 
     # Вместо db.get(...):
@@ -127,6 +137,8 @@ async def detach_tag_from_found_item(
     found_item_id: int,
     tag_id: int,
     db: AsyncSession = Depends(get_db),
+    token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+    user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
     """
     Удаляет связь между FoundItem и Tag.
@@ -165,7 +177,12 @@ async def read_found_item(
         item_id: int,
         db: AsyncSession = Depends(get_db)
 ):
-    item = await db.get(models.FoundItem, item_id)
+    result = await db.execute(
+        select(models.FoundItem)
+        .options(selectinload(models.FoundItem.tags))
+        .where(models.FoundItem.id == item_id)
+    )
+    item = result.scalar_one_or_none()
     if item is None:
         raise HTTPException(status_code=404, detail="Item not found")
     return item
@@ -175,7 +192,9 @@ async def read_found_item(
 async def update_found_item(
         item_id: int,
         item: schemas.FoundItemUpdate,
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
+        token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+        user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
     db_item = await db.get(models.FoundItem, item_id)
     if db_item is None:
@@ -184,13 +203,23 @@ async def update_found_item(
         setattr(db_item, field, value)
     await db.commit()
     await db.refresh(db_item)
+
+    # Выполняем повторный запрос с eager loading для поля tags
+    result = await db.execute(
+        select(models.FoundItem)
+        .options(selectinload(models.FoundItem.tags))
+        .where(models.FoundItem.id == item_id)
+    )
+    db_item = result.scalar_one_or_none()
     return db_item
 
 
 @router.delete("/{item_id}")
 async def delete_found_item(
         item_id: int,
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
+        token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+        user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
     db_item = await db.get(models.FoundItem, item_id)
     if db_item is None:
