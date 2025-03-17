@@ -6,9 +6,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload  # <-- добавили
 from typing import Optional
 from database import get_db
-from utils.security import get_db, get_current_user, oauth2_scheme
-from schemas import UserRead
-from models import User  # не забудьте модель пользователя!
 
 
 router = APIRouter()
@@ -18,8 +15,8 @@ router = APIRouter()
 async def create_found_item(
     item: schemas.FoundItemCreate,
     db: AsyncSession = Depends(get_db),
-    token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-    user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+    # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+    # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
     # Проверяем, существует ли категория
     category = await db.execute(
@@ -101,8 +98,8 @@ async def attach_tag_to_found_item(
     found_item_id: int,
     tag_id: int = Query(...),
     db: AsyncSession = Depends(get_db),
-    token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-    user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+    # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+    # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
 
     # Вместо db.get(...):
@@ -137,8 +134,8 @@ async def detach_tag_from_found_item(
     found_item_id: int,
     tag_id: int,
     db: AsyncSession = Depends(get_db),
-    token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-    user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+    # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+    # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
     """
     Удаляет связь между FoundItem и Tag.
@@ -193,8 +190,8 @@ async def update_found_item(
         item_id: int,
         item: schemas.FoundItemUpdate,
         db: AsyncSession = Depends(get_db),
-        token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-        user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+        # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+        # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
     db_item = await db.get(models.FoundItem, item_id)
     if db_item is None:
@@ -218,8 +215,8 @@ async def update_found_item(
 async def delete_found_item(
         item_id: int,
         db: AsyncSession = Depends(get_db),
-        token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-        user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+        # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+        # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
     db_item = await db.get(models.FoundItem, item_id)
     if db_item is None:

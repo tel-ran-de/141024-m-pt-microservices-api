@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+
+  lostfound_service:
+    build: ./lost_found_service
+    container_name: lostfound_service
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: lostfound_db
+      DB_PORT: 5432
+      DB_NAME: LostAndFoundDB_ref
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      - lostfound_db
+
+  lostfound_db:
+    image: postgres:15.3
+    container_name: lostfound_db
+    environment:
+      POSTGRES_DB: LostAndFoundDB_ref
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - lostfound_db_data:/var/lib/postgresql/data
+
+  auth_service:
+    build: ./auth_service
+    container_name: auth_service
+    ports:
+      - "8003:8003"
+    environment:
+      DB_HOST: auth_db
+      DB_PORT: 5432
+      DB_NAME: AuthDB
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      - auth_db
+
+  auth_db:
+    image: postgres:15.3
+    container_name: auth_db
+    environment:
+      POSTGRES_DB: AuthDB
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+
+volumes:
+  lostfound_db_data:
+  auth_db_data:

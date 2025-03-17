@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from database import get_db
-from utils.security import get_db, get_current_user, oauth2_scheme
 import models
 import schemas
 
@@ -15,8 +14,8 @@ router = APIRouter()
 async def create_category(
         category: schemas.CategoryCreate,
         db: AsyncSession = Depends(get_db),
-        token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-        user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+        # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+        # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
     db_category = models.Category(**category.model_dump())
     db.add(db_category)
@@ -39,8 +38,8 @@ async def update_category(
         category_id: int,
         category_update: schemas.CategoryUpdate,
         db: AsyncSession = Depends(get_db),
-        token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-        user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+        # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+        # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
     category = await db.execute(select(models.Category).where(models.Category.id == category_id))
     category = category.scalar_one_or_none()
@@ -59,8 +58,8 @@ async def update_category(
 async def delete_category(
         category_id: int,
         db: AsyncSession = Depends(get_db),
-        token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-        user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+        # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+        # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
     category = await db.execute(select(models.Category).where(models.Category.id == category_id))
     category = category.scalar_one_or_none()

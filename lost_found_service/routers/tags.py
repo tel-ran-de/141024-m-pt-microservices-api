@@ -4,7 +4,6 @@ from sqlalchemy import select
 from typing import List
 
 from database import get_db
-from utils.security import get_db, get_current_user, oauth2_scheme
 import models
 import schemas
 
@@ -16,8 +15,8 @@ router = APIRouter()
 async def create_tag(
     tag_in: schemas.TagCreate,
     db: AsyncSession = Depends(get_db),
-    token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-    user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+    # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+    # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
     """
     Создаём новый тег.
@@ -54,8 +53,8 @@ async def read_tags(
 async def read_tag_by_id(
     tag_id: int,
     db: AsyncSession = Depends(get_db),
-    token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-    user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+    # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+    # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
     """
     Ищем тег по ID.
@@ -71,8 +70,8 @@ async def update_tag(
     tag_id: int,
     tag_in: schemas.TagCreate,  # или отдельная схема для update
     db: AsyncSession = Depends(get_db),
-    token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-    user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+    # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+    # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
     """
     Обновляем name тега.
@@ -102,8 +101,8 @@ async def update_tag(
 async def delete_tag(
     tag_id: int,
     db: AsyncSession = Depends(get_db),
-    token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-    user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+    # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
+    # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
 ):
     """
     Удаляем тег из базы по ID.
