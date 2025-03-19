@@ -1,16 +1,16 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordBearer
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-
 import models
+import schemas
 from database import get_db
 
 
-oauth2_scheme = HTTPBearer()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 
 # Секретный ключ для JWT (лучше брать из переменных окружения)
@@ -60,31 +60,30 @@ async def authenticate_user(db: AsyncSession, username: str, password: str):
         return False
     return user
 
-
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db)
-):
+def verify_token(token: str) -> schemas.TokenData:
+    """
+    Проверяет JWT токен и возвращает данные пользователя.
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Неверные данные авторизации",
+        detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-
-    token = credentials.credentials  # 👈 получаем JWT-токен напрямую из credentials
-
     try:
+        # Декодируем токен
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
+        username: str = payload.get("sub")  # sub (subject) обычно содержит username
         if username is None:
             raise credentials_exception
+        return schemas.TokenData(username=username)
     except JWTError:
         raise credentials_exception
 
-    user = await db.execute(select(models.User).where(models.User.username == username))
-    user = user.scalar_one_or_none()
 
-    if user is None:
-        raise credentials_exception
-
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> models.User:
+    """
+    Зависимость для получения текущего пользователя из JWT токена.
+    """
+    token_data = verify_token(token)
+    user = models.User(username=token_data.username)
     return user

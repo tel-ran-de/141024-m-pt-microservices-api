@@ -2,6 +2,11 @@ from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 
+# Модель для данных пользователя в JWT
+class TokenData(BaseModel):
+    username: str | None = None
+
+
 class TagBase(BaseModel):
     """
     Базовая модель для тега.
@@ -24,6 +29,7 @@ class TagUpdate(BaseModel):
     name: Optional[str] = None
     """
     name: str | None = None
+
 
 class TagRead(TagBase):
     """

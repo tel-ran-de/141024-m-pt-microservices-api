@@ -1,13 +1,13 @@
 import schemas
 import models
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload  # <-- добавили
 from typing import Optional
 from database import get_db
-
-
+from utils.security import get_token_data
+import schemas
 
 router = APIRouter()
 
@@ -16,8 +16,7 @@ router = APIRouter()
 async def create_lost_item(
         item: schemas.LostItemCreate,
         db: AsyncSession = Depends(get_db),
-        # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-        # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+        token_data: schemas.TokenData = Depends(get_token_data)
 ):
     # Проверка существования категории
     category = await db.execute(
@@ -44,13 +43,14 @@ async def create_lost_item(
 
 @router.get("/", response_model=list[schemas.LostItem])
 async def read_lost_items(
-    db: AsyncSession = Depends(get_db),
-    skip: int = Query(0, ge=0, description="Сколько записей пропустить"),
-    limit: int = Query(10, gt=0, description="Сколько записей вернуть"),
-    category_id: Optional[int] = Query(None, description="Фильтрация по категории"),
-    location: Optional[str] = Query(None, description="Фильтрация по локации (фрагмент)"),
-    order_by: Optional[str] = Query(None, description="Поле для сортировки, например 'lost_date'"),
-    sort_desc: bool = Query(False, description="Сортировать по убыванию, если True")
+        db: AsyncSession = Depends(get_db),
+        skip: int = Query(0, ge=0, description="Сколько записей пропустить"),
+        limit: int = Query(10, gt=0, description="Сколько записей вернуть"),
+        category_id: Optional[int] = Query(None, description="Фильтрация по категории"),
+        location: Optional[str] = Query(None, description="Фильтрация по локации (фрагмент)"),
+        order_by: Optional[str] = Query(None, description="Поле для сортировки, например 'lost_date'"),
+        sort_desc: bool = Query(False, description="Сортировать по убыванию, если True"),
+        token_data: schemas.TokenData = Depends(get_token_data),
 ):
     """
     Возвращает список потерянных вещей (LostItem) с поддержкой:
@@ -96,13 +96,11 @@ async def read_lost_items(
 # -----------------------------------------------------------------------------
 @router.post("/{lost_item_id}/tags", response_model=schemas.LostItem)
 async def attach_tag_to_lost_item(
-    lost_item_id: int,
-    tag_id: int = Query(...),
-    db: AsyncSession = Depends(get_db),
-    # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-    # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+        lost_item_id: int,
+        tag_id: int = Query(...),
+        db: AsyncSession = Depends(get_db),
+        token_data: schemas.TokenData = Depends(get_token_data)
 ):
-
     # Вместо db.get(...):
     # 1) Выполним явный SELECT с .options(selectinload(...))
     lost_item_query = (
@@ -132,11 +130,10 @@ async def attach_tag_to_lost_item(
 
 @router.delete("/{lost_item_id}/tags/{tag_id}")
 async def detach_tag_from_lost_item(
-    lost_item_id: int,
-    tag_id: int,
-    db: AsyncSession = Depends(get_db),
-    # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-    # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+        lost_item_id: int,
+        tag_id: int,
+        db: AsyncSession = Depends(get_db),
+        token_data: schemas.TokenData = Depends(get_token_data)
 ):
     """
     Удаляет связь между LostItem и Tag.
@@ -171,7 +168,11 @@ async def detach_tag_from_lost_item(
 
 
 @router.get("/{item_id}", response_model=schemas.LostItem)
-async def read_lost_item(item_id: int, db: AsyncSession = Depends(get_db)):
+async def read_lost_item(
+        item_id: int,
+        db: AsyncSession = Depends(get_db),
+        token_data: schemas.TokenData = Depends(get_token_data)
+):
     result = await db.execute(
         select(models.LostItem)
         .options(selectinload(models.LostItem.tags))
@@ -188,8 +189,7 @@ async def update_lost_item(
         item_id: int,
         item: schemas.LostItemUpdate,
         db: AsyncSession = Depends(get_db),
-        # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-        # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+        token_data: schemas.TokenData = Depends(get_token_data)
 ):
     db_item = await db.get(models.LostItem, item_id)
     if db_item is None:
@@ -215,8 +215,7 @@ async def update_lost_item(
 async def delete_lost_item(
         item_id: int,
         db: AsyncSession = Depends(get_db),
-        # token: str = Depends(oauth2_scheme),  # 👈 явно используем схему OAuth2 из main
-        # user: models.User = Depends(get_current_user),  # 👈 защита через JWT
+        token_data: schemas.TokenData = Depends(get_token_data)
 ):
     db_item = await db.get(models.LostItem, item_id)
     if db_item is None:

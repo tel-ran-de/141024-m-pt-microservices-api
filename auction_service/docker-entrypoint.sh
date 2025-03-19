@@ -15,5 +15,5 @@ wait_for_db
 echo "Applying Alembic migrations..."
 alembic upgrade head
 
-echo "Starting AuthService..."
-exec uvicorn main:app --host 0.0.0.0 --port 8003  --reload
+echo "Starting AuctionService..."
+exec uvicorn main:app --host 0.0.0.0 --port 8004 --reload

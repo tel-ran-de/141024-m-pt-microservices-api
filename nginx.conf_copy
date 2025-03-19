@@ -28,53 +28,37 @@ http {
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         }
 
-        # Локация для /api/ без проверки авторизации
-        location ~ ^/api/(docs|tags/*|openapi\.json)$ {
+        # Локация для /api/docs без проверки авторизации
+        location ~ ^/api/(docs|openapi\.json)$ {
             proxy_pass http://lostfound_service:8000;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         }
 
-        # Локация для API с проверкой авторизации
+        # Локация для всех остальных /api/ с проверкой авторизации
         location /api/ {
-            auth_request /auth/verify;  # Проверка авторизации перед проксированием
-            auth_request_set $auth_status $upstream_status;
+            # Проверка авторизации перед проксированием
+            auth_request /auth/verify;
+            auth_request_set $user_id $upstream_http_x_user_id;  # Извлекаем user_id из заголовка
+            auth_request_set $username $upstream_http_x_username;  # Извлекаем username из заголовка
 
+            # Проксирование запроса на микросервис
             proxy_pass http://lostfound_service:8000/;
             proxy_set_header X-Forwarded-Prefix /api;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
-#             Обработка ошибок авторизации
+            # Добавляем данные пользователя в заголовки запроса
+            proxy_set_header X-User-ID $user_id;  # Передаем user_id
+            proxy_set_header X-Username $username;  # Передаем username
+
+            # Обработка ошибок авторизации
             error_page 401 = @error401;
             error_page 403 = @error403;
         }
 
-        # Локация для /auction/ без проверки авторизации
-        location ~ ^/auction/(docs|openapi\.json)$ {
-            proxy_pass http://auction_service:8004;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        }
-
-        location /auction/ {
-#             Раскомментируйте строки ниже, чтобы включить авторизацию для сервиса "Аукцион"
-#             auth_request /auth/verify;  # Проверка авторизации перед проксированием
-#             auth_request_set $auth_status $upstream_status;
-
-            proxy_pass http://auction_service:8004/;
-            proxy_set_header X-Forwarded-Prefix /auction;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-
-#             Обработка ошибок авторизации
-            error_page 401 = @error401;
-            error_page 403 = @error403;
-        }
 
         # Обработка ошибки 401 (Unauthorized)
         location @error401 {
