@@ -760,3 +760,5 @@ GET /lost_items/?skip=5&limit=5&category_id=2&location=москва&order_by=los
 **commit: `Урок 18: интеграция RabbitMQ и оптимизация конфигурации FastAPI`**
 
 **commit: `Урок 18 (FIX): интеграция RabbitMQ и оптимизация конфигурации FastAPI`**
+
+**commit: `Урок 18 (FIX2): интеграция RabbitMQ и оптимизация конфигурации FastAPI`**
