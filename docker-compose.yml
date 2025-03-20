@@ -2,6 +2,14 @@ version: "3.8"
 
 services:
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672" # Веб-интерфейс управления RabbitMQ
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
   lostfound_service:
     build:
       context: ./lost_found_service
@@ -19,6 +27,7 @@ services:
       - ./lost_found_service:/app
     depends_on:
       - lostfound_db
+      - rabbitmq
 
   lostfound_db:
     image: postgres:15.3
@@ -49,6 +58,7 @@ services:
       - ./auth_service:/app
     depends_on:
       - auth_db
+      - rabbitmq
 
   auth_db:
     image: postgres:15.3
@@ -75,10 +85,10 @@ services:
       DB_NAME: AuctionDB
       DB_USER: postgres
       DB_PASSWORD: postgres
-      LOST_ITEMS_SERVICE_URL: "http://lostfound_service:8000/api/lost_items/"
     volumes:
       - ./auction_service:/app
     depends_on:
+      - rabbitmq
       - auction_db
 
   auction_db:
@@ -93,19 +103,20 @@ services:
     volumes:
       - auction_db_data:/var/lib/postgresql/data
 
-  nginx:
-    image: nginx:latest
-    container_name: nginx
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - auth_service
-      - lostfound_service
-      - auction_service
+#  nginx:
+#    image: nginx:latest
+#    container_name: nginx
+#    ports:
+#      - "80:80"
+#    volumes:
+#      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+#    depends_on:
+#      - auth_service
+#      - lostfound_service
+#      - auction_service
 
 volumes:
   lostfound_db_data:
   auth_db_data:
   auction_db_data:
+  rabbitmq_data:

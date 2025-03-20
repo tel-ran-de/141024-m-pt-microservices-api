@@ -1,5 +1,3 @@
-import os
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, and_, or_
 import models, schemas
@@ -8,7 +6,7 @@ from database import AsyncSession, get_db
 
 router = APIRouter()
 
-LOST_ITEMS_SERVICE_URL = os.getenv("LOST_ITEMS_SERVICE_URL", "http://lostfound_service:8000/api/lost_items/")
+LOST_ITEMS_SERVICE_URL = "http://lostfound_service:8000/api/lost_items/"  # Замените на URL вашего сервиса
 
 @router.post("/", response_model=schemas.Auction)
 async def create_auction(auction: schemas.AuctionCreate, db: AsyncSession = Depends(get_db)):

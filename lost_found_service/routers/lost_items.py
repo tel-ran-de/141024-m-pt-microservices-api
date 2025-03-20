@@ -50,7 +50,7 @@ async def read_lost_items(
         location: Optional[str] = Query(None, description="Фильтрация по локации (фрагмент)"),
         order_by: Optional[str] = Query(None, description="Поле для сортировки, например 'lost_date'"),
         sort_desc: bool = Query(False, description="Сортировать по убыванию, если True"),
-        token_data: schemas.TokenData = Depends(get_token_data),
+        # token_data: schemas.TokenData = Depends(get_token_data),
 ):
     """
     Возвращает список потерянных вещей (LostItem) с поддержкой:
@@ -171,7 +171,7 @@ async def detach_tag_from_lost_item(
 async def read_lost_item(
         item_id: int,
         db: AsyncSession = Depends(get_db),
-        token_data: schemas.TokenData = Depends(get_token_data)
+        # token_data: schemas.TokenData = Depends(get_token_data)
 ):
     result = await db.execute(
         select(models.LostItem)
