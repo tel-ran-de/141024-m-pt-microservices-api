@@ -23,6 +23,8 @@ services:
       DB_NAME: LostAndFoundDB_ref
       DB_USER: postgres
       DB_PASSWORD: postgres
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
     volumes:
       - ./lost_found_service:/app
     depends_on:
@@ -54,6 +56,8 @@ services:
       DB_NAME: AuthDB
       DB_USER: postgres
       DB_PASSWORD: postgres
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
     volumes:
       - ./auth_service:/app
     depends_on:
@@ -85,6 +89,8 @@ services:
       DB_NAME: AuctionDB
       DB_USER: postgres
       DB_PASSWORD: postgres
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
     volumes:
       - ./auction_service:/app
     depends_on:
