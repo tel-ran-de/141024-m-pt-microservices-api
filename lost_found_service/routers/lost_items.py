@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload  # <-- добавили
 from typing import Optional
 from database import get_db
 from utils.security import get_token_data
+from utils.chatgpt import chatgpt_similarity
 import schemas
 
 router = APIRouter()
@@ -224,3 +225,97 @@ async def delete_lost_item(
     await db.delete(db_item)
     await db.commit()
     return {"message": "Item deleted"}
+
+
+@router.get("/{lost_item_id}/similar_found_items")
+async def get_similar_found_items(
+    lost_item_id: int,
+    db: AsyncSession = Depends(get_db),
+    top_k: int = Query(5, description="Сколько максимально похожих вернуть"),
+    # token_data: schemas.TokenData = Depends(get_token_data)  # если нужна авторизация
+):
+    """
+    Для данного LostItem вызываем ChatGPT (модель ChatCompletion)
+    и сравниваем его с каждым FoundItem.
+    Возвращаем top_k найденных предметов с наибольшим 'процентом совпадения'.
+    (На каждый FoundItem уходит отдельный запрос к ChatGPT!)
+    """
+
+    # 1) Ищем LostItem
+    result = await db.execute(
+        select(models.LostItem)
+        .options(
+            selectinload(models.LostItem.tags),
+            selectinload(models.LostItem.category)
+        )
+        .where(models.LostItem.id == lost_item_id)
+    )
+    lost_item = result.scalar_one_or_none()
+    if not lost_item:
+        raise HTTPException(status_code=404, detail="LostItem not found")
+
+    # 2) Формируем текст LostItem
+    lost_parts = [
+        f"Название: {lost_item.name}",
+        f"Описание: {lost_item.description or ''}"
+    ]
+    if lost_item.category:
+        lost_parts.append(f"Категория: {lost_item.category.name}")
+    if lost_item.tags:
+        tag_names = ", ".join(tag.name for tag in lost_item.tags)
+        lost_parts.append(f"Теги: {tag_names}")
+    lost_text = "\n".join(lost_parts)
+
+    # 3) Берём все FoundItem (можете сделать фильтры, если нужно)
+    found_result = await db.execute(
+        select(models.FoundItem)
+        .options(
+            selectinload(models.FoundItem.tags),
+            selectinload(models.FoundItem.category)
+        )
+    )
+    found_items = found_result.scalars().all()
+    if not found_items:
+        return []
+
+    # 4) Для каждого FoundItem формируем prompt и вызываем ChatGPT
+    scored_items = []
+    for f_item in found_items:
+        found_parts = [
+            f"Название: {f_item.name}",
+            f"Описание: {f_item.description or ''}"
+        ]
+        if f_item.category:
+            found_parts.append(f"Категория: {f_item.category.name}")
+        if f_item.tags:
+            ftags = ", ".join(tag.name for tag in f_item.tags)
+            found_parts.append(f"Теги: {ftags}")
+        found_text = "\n".join(found_parts)
+
+        # Вызываем ChatGPT, получаем число 0..100
+        similarity_score = chatgpt_similarity(lost_text, found_text)
+
+        scored_items.append((f_item, similarity_score))
+
+    # 5) Сортируем по убыванию
+    scored_items.sort(key=lambda x: x[1], reverse=True)
+
+    # 6) Формируем ответ (берём первые top_k)
+    results = []
+    for item, score in scored_items[:top_k]:
+        # Конвертируем FoundItem в pydantic-модель (schemas.FoundItem)
+        item_data = schemas.FoundItem(
+            id=item.id,
+            category_id=item.category_id,
+            name=item.name,
+            description=item.description,
+            found_date=item.found_date,
+            location=item.location,
+            tags=[schemas.TagRead(id=t.id, name=t.name) for t in item.tags]
+        )
+        results.append({
+            "found_item": item_data,
+            "similarity_percent": round(score, 2)
+        })
+
+    return results
